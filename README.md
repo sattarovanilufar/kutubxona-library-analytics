@@ -12,8 +12,8 @@ errors for cleaning practice.
 | # | Folder | Skills | Status |
 |---|---|---|---|
 | 1 | `01_business_questions/` | JOINs, CASE, dates, conditional aggregation | ✅ done |
-| 2 | `02_window_functions/` | ROW_NUMBER, RANK, LAG/LEAD, running totals | 🔄 in progress |
-| 3 | `03_data_cleaning/` | finding and fixing data quality issues | (coming soon) |
+| 2 | `02_window_functions/` | ROW_NUMBER, RANK, LAG/LEAD, running totals | ✅ done |
+| 3 | `03_data_cleaning/` | finding and fixing data quality issues | (coming soon) |🔄 in progress |
 | 4 | `04_product_metrics/` | active users, cohort retention, funnel | (coming soon) |
 | 5 | `05_python_analysis/` | pandas, seaborn, final insights | (coming soon) |
 
@@ -33,7 +33,18 @@ the result, and notes on how I checked it.
 10. Average days a book is kept, per category
 
 ## 2. Window functions
-*(questions added as they are completed)*
+## 2. Window functions
+All 10 queries are in `02_window_functions/window_functions.sql`.
+1. Number each member's loans in time order
+2. Each member's first loan (name, date, book)
+3. Top 3 most borrowed books in each category
+4. Days since the same member's previous loan
+5. Loans per month and % change vs the previous month
+6. Running total of loans by month
+7. 3-month moving average of monthly loans
+8. Each book's share of its category's loans
+9. Members in quartiles by activity: how much does the most active 25% borrow?
+10. % of members who borrow again within 30 days of their first loan, by membership type
 
 ## Key findings
 *(added after Section 5)*
