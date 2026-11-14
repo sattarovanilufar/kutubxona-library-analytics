@@ -33,7 +33,6 @@ the result, and notes on how I checked it.
 10. Average days a book is kept, per category
 
 ## 2. Window functions
-## 2. Window functions
 All 10 queries are in `02_window_functions/window_functions.sql`.
 1. Number each member's loans in time order
 2. Each member's first loan (name, date, book)
