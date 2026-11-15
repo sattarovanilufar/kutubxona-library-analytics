@@ -12,8 +12,12 @@
 | 9 | library_fine | amount | Negative fine amount | 4 | Check 6 (logic) | Leave out of fine totals (4 of 636); likely a sign error, but we can't be sure |
 | 10 | library_fine | paid_date | Marked paid (paid = 1) but no paid_date | 7 | Check 6 (logic) | Keep as paid; treat paid_date as unknown, leave out of "days to pay" metrics |
 | 11 | library_loan | member_id | Orphan loans: member_id doesn't exist in library_member | 6 | Check 6 (logic) | Remove from loan_clean; we can't know who borrowed the book |
-
+| 12 | library_member | first_name | Extra spaces at the start or end | 42 | Check 3 (missing/format) | Fix in member_clean: TRIM(first_name) |
+| 13 | library_member | last_name | Written in ALL CAPITALS (KARIMOV) | 20 | Check 2 (format) | Fix in member_clean: first letter capital, rest small (Karimov) |
+| 14 | library_member | phone | Phone as 8998057543 instead of +998 99 805 75 43 | 73 | Check 2 (format) | Fix in member_clean: replace the leading 8 with +998, one format for all |
 
 
 Note: run duplicate checks AFTER fixing date formats, otherwise some duplicates are missed.
+Status: issues 1, 3, 4, 5, 12, 13, 14 fixed in member_clean (412 -> 400 rows).
+Status: issues 6, 7, 8, 11 fixed in loan_clean (3,519 -> 3,461 rows). Issues 2, 9, 10 (books, fines) not fixed yet: not needed for  metrics.
 

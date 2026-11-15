@@ -124,3 +124,106 @@ SELECT loan.id, loan.member_id
 FROM library_loan AS loan
 LEFT JOIN library_member AS member ON member.id = loan.member_id
 WHERE member.id IS NULL;
+
+
+-- Issue 12 (format): first names with extra spaces
+-- Why: 'Ali ' and 'Ali' look the same but don't match in joins or GROUP BY
+-- Result: 42 of 412 members (10%)
+-- Note: if TRIM changes the value, it had spaces
+SELECT COUNT(*) AS bad_names
+FROM library_member
+WHERE TRIM(first_name) <> first_name;
+
+
+-- Issue 13 (format): last names in ALL CAPITALS
+-- Why: reports and name searches show the same family name in two styles
+-- Result: 20 of 412 members (5%)
+-- Note: SQLite '=' is case-sensitive, so 'Karimov' <> 'KARIMOV'
+SELECT COUNT(*) AS capital_last_names
+FROM library_member
+WHERE UPPER(last_name) = last_name;
+
+
+-- Issue 14 (format): phone numbers in a different format
+-- Why: the same phone written two ways can't be matched or used for SMS reminders
+-- Result: 73 of 412 members (18%)
+-- Note: correct format starts with +998
+SELECT COUNT(*) AS different_format
+FROM library_member
+WHERE phone NOT LIKE '+998%';
+
+-- =========================================
+-- PART 2: CLEAN VIEWS
+-- =========================================
+
+-- View 1: member_clean
+-- Why: one clean row per real person; fixes issues 1, 3, 4, 5, 12, 13, 14
+-- Result: 412 raw rows -> 400 clean rows (12 duplicates removed, 12 members without email kept)
+-- Note: duplicates = same email after LOWER + TRIM; the oldest id is kept.
+--       Members without email get a unique key ('no-email-' || id), so they are not merged.
+--       Known limit: last names become "Capital + small letters" (Abdul-Karimov -> Abdul-karimov).
+--       Phone target format: +998901234567 (no spaces).
+DROP VIEW IF EXISTS member_clean;
+CREATE VIEW member_clean AS
+WITH fixed AS (
+    SELECT id,
+           TRIM(first_name) AS first_name,
+           UPPER(SUBSTR(TRIM(last_name), 1, 1)) || LOWER(SUBSTR(TRIM(last_name), 2)) AS last_name,
+           NULLIF(LOWER(TRIM(email)), '') AS email,
+           CASE WHEN LOWER(TRIM(membership_type)) = 'standart' THEN 'standard'
+                ELSE LOWER(TRIM(membership_type)) END AS membership_type,
+           CASE WHEN joined_date LIKE '__.__.____'
+                THEN SUBSTR(joined_date, 7, 4) || '-' || SUBSTR(joined_date, 4, 2) || '-' || SUBSTR(joined_date, 1, 2)
+                ELSE joined_date END AS joined_date,
+           CASE WHEN phone LIKE '8%' THEN '+998' || SUBSTR(REPLACE(phone, ' ', ''), 2)
+                ELSE REPLACE(phone, ' ', '') END AS phone,
+           is_active
+    FROM library_member
+),
+ranked AS (
+    SELECT id, first_name, last_name, email, membership_type, joined_date, phone, is_active,
+           ROW_NUMBER() OVER (PARTITION BY COALESCE(email, 'no-email-' || id) ORDER BY id) AS rn
+    FROM fixed
+)
+SELECT id, first_name, last_name, email, membership_type, joined_date, phone, is_active
+FROM ranked
+WHERE rn = 1;
+
+-- Checks on member_clean (all passed)
+-- Result: 400 rows; 3 membership types; 0 bad joined_date; 0 capital last names
+SELECT COUNT(*) AS clean_rows FROM member_clean;
+SELECT membership_type, COUNT(*) FROM member_clean GROUP BY membership_type;
+SELECT COUNT(*) AS bad_dates FROM member_clean
+WHERE joined_date NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]';
+SELECT COUNT(*) AS capital_last_names FROM member_clean WHERE UPPER(last_name) = last_name;
+
+
+-- View 2: loan_clean
+-- Why: one clean row per real loan; fixes issues 6, 7, 8, 11
+-- Result: 3,519 raw rows -> 3,461 clean rows (-40 duplicates, -12 returned before borrowed, -6 orphans)
+-- Note: loan_date is fixed BEFORE removing duplicates, otherwise '2025/03/05' and '2025-03-05' look different.
+--       Unreturned loans (return_date IS NULL) are kept; same-day returns (>=) are valid.
+--       Joined with raw library_member (not member_clean), so no loan is hidden.
+--       Checked: 0 loans belong to the 12 duplicate member ids removed in member_clean.
+--       AND runs before OR, so the return condition is in brackets.
+DROP VIEW IF EXISTS loan_clean;
+CREATE VIEW loan_clean AS
+WITH fixed AS (
+    SELECT id, REPLACE(loan_date, '/', '-') AS loan_date, due_date, return_date, book_id, member_id
+    FROM library_loan
+),
+ranked AS (
+    SELECT id, loan_date, due_date, return_date, book_id, member_id,
+           ROW_NUMBER() OVER (PARTITION BY loan_date, due_date, return_date, book_id, member_id
+                              ORDER BY id) AS rn
+    FROM fixed
+)
+SELECT ranked.id, loan_date, due_date, return_date, book_id, member_id
+FROM ranked
+JOIN library_member AS member ON ranked.member_id = member.id
+WHERE rn = 1
+  AND (return_date >= loan_date OR return_date IS NULL);
+
+-- Checks on loan_clean (all passed)
+-- Result: 3,461 rows; 0 bad loan_date; 0 duplicate groups; 0 returned before borrowed; 0 orphans
+SELECT COUNT(*) AS clean_rows FROM loan_clean;
