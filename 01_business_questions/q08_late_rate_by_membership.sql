@@ -1,19 +1,21 @@
 --Q8: For each membership type: total loans, late loans, and late rate %.
-
-SELECT  member.membership_type, COUNT(loan.id) AS total_loans, SUM(CASE WHEN loan.return_date>loan.due_date OR (loan.return_date IS NULL AND loan.due_date <DATE('now', 'localtime')) THEN 1 ELSE 0 END ) AS late_loans, round(100.0*SUM(CASE WHEN loan.return_date>loan.due_date OR (loan.return_date IS NULL AND loan.due_date <DATE('now', 'localtime')) THEN 1 ELSE 0 END )/COUNT(loan.id), 1) AS late_rate
+-- Result (v2, as of 2026-11-10):
+--   student   1,143 loans, 321 late -> 28.1%
+--   standard  1,290 loans, 240 late -> 18.6%
+--   premium   1,046 loans, 100 late ->  9.6%
+-- Students are late almost 3x as often as premium members.
+-- Check: 1,143 + 1,290 + 1,046 = 3,479 = all loans.
+-- Note: on the small Django database (47 loans) premium looked almost as late as students (41.7% vs 42.9%);
+--       I noted it was probably luck. With 3,479 loans the real order is clear: small samples mislead.
+--       Late = returned after due_date, or not returned and due_date before the as-of date (2026-11-10).
+--       The 128 active loans count as "not late", but some may still become late (their outcome is unknown).
+WITH as_of AS (
+	SELECT MAX(loan_date) AS d 
+	FROM library_loan)
+SELECT  member.membership_type, COUNT(loan.id) AS total_loans, SUM(CASE WHEN loan.return_date>loan.due_date OR (loan.return_date IS NULL AND loan.due_date <d) THEN 1 ELSE 0 END ) AS late_loans, round(100.0*SUM(CASE WHEN loan.return_date>loan.due_date OR (loan.return_date IS NULL AND loan.due_date <d) THEN 1 ELSE 0 END )/COUNT(loan.id), 1) AS late_rate
 FROM library_member AS member
 LEFT JOIN library_loan AS loan
 ON member.id=loan.member_id
+CROSS JOIN as_of
 GROUP BY member.membership_type
 ORDER BY late_rate DESC;
-
--- Result (run on 2026-10-16):
---   student   14 loans, 6 late -> 42.9%
---   premium   12 loans, 5 late -> 41.7%
---   standard  21 loans, 7 late -> 33.3%
--- Students and premium members are late most often, standard members least.
--- But the groups are very small: one loan changes the rate by about 5-8%.
--- Student vs premium differ by only 1.2%, less than one loan, so this is luck.
--- Student vs standard differ by 9.6%, only 1-2 loans, so it may be luck too.
--- I will re-check this on Kutubxona v2 (~3,000 loans) before drawing a conclusion.
--- Note: 47 loans in total (45 from the seed + 2 I added in the admin).

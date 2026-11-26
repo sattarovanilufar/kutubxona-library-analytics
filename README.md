@@ -26,6 +26,7 @@ Each `.sql` file starts with a comment block: the business question, why it matt
 the result, and notes on how I checked it.
 
 ## 1. Business questions
+Written and first checked on my own Django database (47 loans, small enough to check by eye), then re-run on Kutubxona v2. Several "patterns" in the small data disappeared or reversed with 3,479 loans, e.g. the late rate by membership type.
 1. How many books are in each category?
 2. How many loans are returned, active and overdue?
 3. Overdue call list: who to phone, and how many days late?
