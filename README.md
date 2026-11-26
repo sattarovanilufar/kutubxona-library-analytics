@@ -73,7 +73,7 @@ Notebook: `05_python_analysis/kutubxona_analysis.ipynb`.
 
 ## Key findings
 
-1. **Many reservations are cancelled.** 22% of online reservations (47 of 213) are cancelled before the book is ready. That's the biggest drop in the reservation funnel, bigger than members not picking up their books (18%). The library should find out why reservations are cancelled (e.g. waiting time) and buy extra copies of the books with the longest queues.
+1. **Many reservations are cancelled.** 22% of online reservations (45 of 207) are cancelled before the book is ready, slightly more than members who don't pick up a ready book (18%). The library should find out why reservations are cancelled (e.g. waiting time) and buy extra copies of the books with the longest queues.
 
 2. **Strong growth, but a summer dip.** Monthly loans grew 8× (33 in Jan 2025 -> 267 in Oct 2026), but fell 28% in summer 2026 (241 in May -> 173 in June), likely because students are on holiday. The library should run a summer reading challenge for students to keep them borrowing.
 
