@@ -59,7 +59,7 @@ ORDER BY member_id, loan_date;
 WITH extracted_month AS(
 SELECT STRFTIME('%Y-%m', loan_date)  AS month, COUNT(id) AS loans_per_month
 FROM library_loan
-WHERE loan_date < date('now', 'localtime', 'start of month')
+WHERE loan_date < date((SELECT MAX(loan_date) FROM library_loan), 'start of month')
 GROUP BY month),
 	previous_month AS(
 SELECT month, loans_per_month, LAG(loans_per_month) OVER( ORDER BY month) AS loans_prev_month
@@ -67,7 +67,13 @@ FROM extracted_month)
 SELECT month, loans_prev_month, loans_per_month, ROUND(100.0*(loans_per_month-loans_prev_month)/loans_prev_month, 1) AS percentage_diff
 FROM previous_month
 ORDER BY month;
--- Note: the incomplete current month is excluded (a partial month always looks like a big drop).
+-- Result (v2): loans grew most months; the biggest real drop is 2026-06 (-28.2%, summer dip), 
+--         the biggest jump 2025-09 (+78.4%, after the 2025 summer).
+-- Check: monthly counts match q05 and the monthly chart.
+-- Note: only complete months are included: the data stops on 2026-11-10 (as-of date), so 2026-11 is left out
+--       (a partial month always looks like a big drop). The as-of date is used instead of date('now'),
+--       so the result doesn't change when the query is run later.
+--       2025-01 shows +175% only because 2024-12 was the library's first, partial month (from 6 Dec).
 
 -- W6: Running (cumulative) total of loans by month.
 -- Why: shows total library usage over time ("how many loans so far").
